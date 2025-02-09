@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "817962607619",
+    "project_id": "forestsurvey-b227d",
+    "storage_bucket": "forestsurvey-b227d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:817962607619:android:9740db70f0e35ff1775a36",
+        "android_client_info": {
+          "package_name": "com.example.forestsurvey"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBU7b3PkW4gdFQFFI16NtyWbFzjT-Qlaxo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
