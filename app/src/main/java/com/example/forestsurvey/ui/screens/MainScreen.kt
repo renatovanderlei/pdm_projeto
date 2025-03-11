@@ -21,79 +21,97 @@ fun MainScreen(navController: NavHostController) {
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top // Mover a logo para mais cima na tela
+        verticalArrangement = Arrangement.Top
     ) {
         Image(
-            painter = painterResource(id = R.drawable.logo_fp), // Substitua pelo ID correto da sua imagem
+            painter = painterResource(id = R.drawable.logo_fp),
             contentDescription = "Logo",
             modifier = Modifier
-                //.size(150.dp) // Ajuste o tamanho da imagem conforme necessário
-                .padding(bottom = 8.dp), // Diminuir o espaçamento entre a logo e o texto
+                .padding(bottom = 8.dp),
             contentScale = ContentScale.Fit
         )
 
-        Spacer(modifier = Modifier.height(32.dp)) // Adicionar um espaçamento adicional entre a logo e os botões
+        Spacer(modifier = Modifier.height(32.dp))
 
+        // Button for "Nova Coleta"
         Button(
             onClick = { navController.navigate("coleta") },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp) // Adicionar margens brancas ao botão
-                .height(IntrinsicSize.Min), // Ajustar a altura do botão automaticamente
-            shape = MaterialTheme.shapes.small.copy(all = CornerSize(12.dp)), // Bordas levemente arredondadas
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Black
-            ),
+                .padding(vertical = 8.dp)
+                .height(IntrinsicSize.Min),
+            shape = MaterialTheme.shapes.small.copy(all = CornerSize(12.dp)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
             border = BorderStroke(2.dp, Color.White)
         ) {
             Text(
                 text = "Nova Coleta",
                 fontSize = 22.sp,
                 color = Color.Black,
-                modifier = Modifier.padding(vertical = 12.dp) // Adicionar mais espaço interno acima e abaixo do texto
+                modifier = Modifier.padding(vertical = 12.dp)
             )
         }
-        Spacer(modifier = Modifier.height(16.dp)) // Mais espaço entre os botões
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Button for "Continuar última coleta"
         Button(
             onClick = { /* Lógica para continuar última coleta */ },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp) // Adicionar margens brancas ao botão
-                .height(IntrinsicSize.Min), // Ajustar a altura do botão automaticamente
-            shape = MaterialTheme.shapes.small.copy(all = CornerSize(12.dp)), // Bordas levemente arredondadas
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Black
-            ),
+                .padding(vertical = 8.dp)
+                .height(IntrinsicSize.Min),
+            shape = MaterialTheme.shapes.small.copy(all = CornerSize(12.dp)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
             border = BorderStroke(2.dp, Color.White)
         ) {
             Text(
                 text = "Continuar última coleta",
                 fontSize = 22.sp,
                 color = Color.Black,
-                modifier = Modifier.padding(vertical = 12.dp) // Adicionar mais espaço interno acima e abaixo do texto
+                modifier = Modifier.padding(vertical = 12.dp)
             )
         }
-        Spacer(modifier = Modifier.height(16.dp)) // Mais espaço entre os botões
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Button for "Ver coletas passadas"
         Button(
             onClick = { /* Lógica para ver coletas passadas */ },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp) // Adicionar margens brancas ao botão
-                .height(IntrinsicSize.Min), // Ajustar a altura do botão automaticamente
-            shape = MaterialTheme.shapes.small.copy(all = CornerSize(12.dp)), // Bordas levemente arredondadas
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Black
-            ),
+                .padding(vertical = 8.dp)
+                .height(IntrinsicSize.Min),
+            shape = MaterialTheme.shapes.small.copy(all = CornerSize(12.dp)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
             border = BorderStroke(2.dp, Color.White)
         ) {
             Text(
                 text = "Ver coletas passadas",
                 fontSize = 22.sp,
                 color = Color.Black,
-                modifier = Modifier.padding(vertical = 12.dp) // Adicionar mais espaço interno acima e abaixo do texto
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Button for "Minhas Parcelas" (new button added)
+        Button(
+            onClick = { navController.navigate("minhasParcelas") }, // Navegar para MinhasParcelasScreen
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .height(IntrinsicSize.Min),
+            shape = MaterialTheme.shapes.small.copy(all = CornerSize(12.dp)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+            border = BorderStroke(2.dp, Color.White)
+        ) {
+            Text(
+                text = "Minhas Parcelas",
+                fontSize = 22.sp,
+                color = Color.Black,
+                modifier = Modifier.padding(vertical = 12.dp)
             )
         }
     }

@@ -103,17 +103,15 @@ fun RegisterScreen(navController: NavHostController, modifier: Modifier = Modifi
         Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Button(
                 onClick = {
-                    Firebase.auth.createUserWithEmailAndPassword(email, password)
-                        .addOnCompleteListener(activity!!) { task ->
-                            if (task.isSuccessful) {
-                                // Registro bem-sucedido
-                                FBDatabase().register(User(name, email)) // Adicionando usuário ao banco de dados
-                                Toast.makeText(activity, "Registro OK!", Toast.LENGTH_LONG).show()
-                                navController.navigate("main")
-                            } else {
-                                Toast.makeText(activity, "Registro FALHOU!", Toast.LENGTH_LONG).show()
-                            }
+                    val fbDatabase = FBDatabase()
+                    fbDatabase.registerUser(name, email, password) { success ->
+                        if (success) {
+                            Toast.makeText(activity, "Registro OK!", Toast.LENGTH_LONG).show()
+                            navController.navigate("main")
+                        } else {
+                            Toast.makeText(activity, "Registro FALHOU!", Toast.LENGTH_LONG).show()
                         }
+                    }
                 },
                 enabled = name.isNotEmpty() && email.isNotEmpty() &&
                         password.isNotEmpty() && password == confirmpassword,
@@ -129,6 +127,7 @@ fun RegisterScreen(navController: NavHostController, modifier: Modifier = Modifi
             ) {
                 Text("Registrar", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
+
 
             Button(
                 onClick = {
