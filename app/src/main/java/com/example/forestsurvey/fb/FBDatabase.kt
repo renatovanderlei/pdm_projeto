@@ -3,6 +3,7 @@ package com.example.forestsurvey.fb
 import android.util.Log
 import com.example.forestsurvey.model.*
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -11,35 +12,51 @@ class FBDatabase {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    fun getCurrentUser() = auth.currentUser
+    fun getCurrentUser(): FirebaseUser? {
+        return FirebaseAuth.getInstance().currentUser
+    }
 
     fun registerUser(name: String, email: String, password: String, onComplete: (Boolean) -> Unit) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val uid = auth.currentUser?.uid ?: return@addOnCompleteListener
-                    val user = User(name = name, email = email)
+                    val user = User(
+                        id = uid,
+                        name = name,
+                        email = email,
+                        parcelasCriadas = emptyList() // Inicializa a lista de parcelas criadas
+                    )
 
+                    // Atualiza o nome no Firebase Authentication
                     auth.currentUser?.updateProfile(
                         UserProfileChangeRequest.Builder()
                             .setDisplayName(name)
                             .build()
-                    )
-
-                    db.collection("users").document(uid).set(user)
-                        .addOnSuccessListener {
-                            onComplete(true)
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e("Firestore", "Erro ao registrar usuário: ${e.message}")
+                    )?.addOnCompleteListener { profileTask ->
+                        if (profileTask.isSuccessful) {
+                            // Após a atualização do perfil, salvar o usuário na coleção 'users' do Firestore
+                            db.collection("users").document(uid).set(user)
+                                .addOnSuccessListener {
+                                    Log.d("Firestore", "Usuário registrado com sucesso.")
+                                    onComplete(true)
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("Firestore", "Erro ao registrar usuário: ${e.message}")
+                                    onComplete(false)
+                                }
+                        } else {
+                            Log.e("Firestore", "Erro ao atualizar perfil: ${profileTask.exception?.message}")
                             onComplete(false)
                         }
+                    }
                 } else {
                     Log.e("Firestore", "Erro no registro: ${task.exception?.message}")
                     onComplete(false)
                 }
             }
     }
+
 
     fun addParcela(novaParcela: Parcela, userId: String) {
         val parcelaMap = mapOf(
@@ -48,10 +65,12 @@ class FBDatabase {
             "userId" to novaParcela.userId
         )
 
+        // Salva a parcela na coleção "Parcela"
         db.collection("Parcela").document(novaParcela.id).set(parcelaMap)
             .addOnSuccessListener {
                 Log.d("Firestore", "Parcela ${novaParcela.nome} adicionada com sucesso.")
 
+                // Adiciona a parcela à lista "parcelasCriadas" do usuário
                 val userRef = db.collection("users").document(userId)
                 userRef.update("parcelasCriadas", FieldValue.arrayUnion(parcelaMap))
                     .addOnSuccessListener {
@@ -153,11 +172,6 @@ class FBDatabase {
     }
 
     fun getParcelas(userId: String, onComplete: (List<Parcela>?, Exception?) -> Unit) {
-        if (userId.isBlank()) {
-            onComplete(null, IllegalArgumentException("UserId não pode ser vazio"))
-            return
-        }
-
         val userRef = db.collection("users").document(userId)
         userRef.get().addOnSuccessListener { userDoc ->
             val user = userDoc.toObject(User::class.java)

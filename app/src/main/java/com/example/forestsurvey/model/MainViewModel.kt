@@ -52,9 +52,6 @@ class MainViewModel(private val fbDB: FBDatabase) : ViewModel(), FBDatabase.List
         loadParcelas(userId)
     }
 
-
-
-
     // Atualiza o usuário ao receber do listener
     override fun onUserLoaded(user: User) {
         _user.value = user

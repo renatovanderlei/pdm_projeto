@@ -1,11 +1,11 @@
 package com.example.forestsurvey.model
 
 data class User(
-    var id: String = "",  // Use 'var' e forneça um valor padrão
-    var name: String = "",  // Use 'var' e forneça um valor padrão
-    var email: String = "",  // Use 'var' e forneça um valor padrão
-    var parcelasCriadas: List<Map<String, String>> = emptyList()  // Use 'var' e forneça um valor padrão
+    val id: String = "",
+    val name: String = "",
+    val email: String = "",
+    val parcelasCriadas: List<Map<String, String>> = emptyList()
 ) {
-    // Construtor sem argumentos (obrigatório para o Firestore)
+    // Construtor secundário caso precise criar um usuário sem parâmetros
     constructor() : this("", "", "", emptyList())
 }

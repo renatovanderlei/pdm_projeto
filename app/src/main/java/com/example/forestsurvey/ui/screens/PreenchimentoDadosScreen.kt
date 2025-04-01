@@ -1,73 +1,68 @@
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
+import coil.compose.rememberImagePainter
 import com.example.forestsurvey.fb.FBDados
-import com.example.forestsurvey.fb.FBDatabase
 import com.example.forestsurvey.model.Anotador
 import com.example.forestsurvey.model.Dados
 import com.example.forestsurvey.model.Flag
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun PreenchimentoDadosScreen(
-    parcela: String, // Nome da parcela passado como parâmetro
+    parcela: String,
     rua: Int,
     subplot: String,
     navController: NavController,
     fbDados: FBDados = FBDados(FirebaseFirestore.getInstance())
 ) {
-    // Variáveis de estado para o nome do usuário
+    // User state
     var userName by remember { mutableStateOf("") }
-
-    // Obter o usuário logado
     val currentUser = remember { FirebaseAuth.getInstance().currentUser }
 
-    // Buscar o nome do usuário
-    LaunchedEffect(currentUser) {
-        if (currentUser != null) {
-            // 1. Tenta usar o displayName
-            val displayName = currentUser.displayName
-            if (!displayName.isNullOrEmpty()) {
-                userName = displayName
-            } else {
-                // 2. Se o displayName não estiver disponível, busca no Firestore
-                getUserNameFromFirestore(
-                    userId = currentUser.uid,
-                    onSuccess = { name ->
-                        userName = name
-                    },
-                    onError = { exception ->
-                        // 3. Se não encontrar no Firestore, usa o email como fallback
-                        userName = currentUser.email ?: "Usuário"
-                    }
-                )
-            }
-        }
-    }
+    // Photo state
+    var fotoUri by remember { mutableStateOf<Uri?>(null) }
+    var fotoUrl by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
-    // Criar o Anotador com o nome do usuário
-    val anotador = remember(userName) {
-        Anotador(
-            userId = currentUser?.uid ?: "",
-            nome = userName
-        )
-    }
-
-    // Variáveis de estado para os campos de Dados
-    var plotCode by remember { mutableStateOf(parcela) } // Usar o nome da parcela como valor inicial
+    // Form fields state
+    var plotCode by remember { mutableStateOf(parcela) }
     var newTagNo by remember { mutableStateOf(0) }
     var newStemGrouping by remember { mutableStateOf("") }
     var t1 by remember { mutableStateOf(0) }
@@ -77,76 +72,153 @@ fun PreenchimentoDadosScreen(
     var family by remember { mutableStateOf("") }
     var originalIdentification by remember { mutableStateOf("") }
     var species by remember { mutableStateOf("") }
-    var diametro30cm by remember { mutableStateOf(0.0) }
-    var diametro130cm by remember { mutableStateOf(0.0) }
-    var altura by remember { mutableStateOf(0.0) }
+    var diametro30cm by remember { mutableStateOf(0f) }
+    var diametro130cm by remember { mutableStateOf(0f) }
+    var altura by remember { mutableStateOf(0f) }
     var observacoes by remember { mutableStateOf("") }
     var flagsSelecionadas by remember { mutableStateOf<List<Flag>>(emptyList()) }
+
+    // UI state
     var isLoading by remember { mutableStateOf(false) }
     var showSnackbarMessage by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Camera launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            fotoUri?.let { uri ->
+                uploadFoto(context, uri, newTagNo) { url ->
+                    fotoUrl = url
+                }
+            }
+        }
+    }
+
+    // Load user name
+    LaunchedEffect(currentUser) {
+        currentUser?.let { user ->
+            userName = user.displayName ?: user.email ?: "Usuário"
+        }
+    }
+
+    val anotador = remember(userName) {
+        Anotador(
+            userId = currentUser?.uid ?: "",
+            nome = userName
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
-            // Mostrar informações da parcela, rua e subplot
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
             Text(
-                text = "Parcela: $parcela, Rua: $rua, Subplot: $subplot",
-                style = MaterialTheme.typography.titleLarge
+                text = "Parcela: $parcela, Subplot: $subplot",
+                style = MaterialTheme.typography.titleMedium
             )
 
-            // Campos para preencher
             LazyColumn(modifier = Modifier.weight(1f)) {
                 item {
-                    // Campo Plot Code (não editável)
                     OutlinedTextField(
                         value = plotCode,
-                        onValueChange = { }, // Impede a edição
+                        onValueChange = {},
                         label = { Text("Plot Code") },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = false // Desabilita o campo
+                        enabled = false
                     )
-                    CampoNumero("New Tag No", newTagNo.toDouble(), { newTagNo = it.toInt() })
+
+                    CampoInteiro("New Tag No", newTagNo, { newTagNo = it })
                     CampoTexto("New Stem Grouping", newStemGrouping, { newStemGrouping = it })
-                    CampoNumero("T1", t1.toDouble(), { t1 = it.toInt() })
-                    CampoNumero("T2", t2.toDouble(), { t2 = it.toInt() })
-                    CampoNumero("X", x.toDouble(), { x = it.toFloat() })
-                    CampoNumero("Y", y.toDouble(), { y = it.toFloat() })
+                    CampoInteiro("T1", t1, { t1 = it })
+                    CampoInteiro("T2", t2, { t2 = it })
+                    CampoFloat("X", x, { x = it })
+                    CampoFloat("Y", y, { y = it })
+                    CampoFloat("Diâmetro 30 cm", diametro30cm, { diametro30cm = it })
+                    CampoFloat("Diâmetro 130 cm", diametro130cm, { diametro130cm = it })
+                    CampoFloat("Altura", altura, { altura = it })
                     CampoTexto("Family", family, { family = it })
                     CampoTexto("Original Identification", originalIdentification, { originalIdentification = it })
                     CampoTexto("Species", species, { species = it })
-                    CampoNumero("Diâmetro 30 cm", diametro30cm, { diametro30cm = it })
-                    CampoNumero("Diâmetro 130 cm", diametro130cm, { diametro130cm = it })
-                    CampoNumero("Altura", altura, { altura = it })
                     CampoTexto("Observações", observacoes, { observacoes = it })
 
-                    // Exibir as flags em um grid 5x6
+                    // Camera section
+                    Button(
+                        onClick = {
+                            try {
+                                val photoFile = createImageFile(context) ?: run {
+                                    Toast.makeText(context, "Não foi possível criar arquivo para foto", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+
+                                val uri = try {
+                                    FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.provider",
+                                        photoFile
+                                    )
+                                } catch (e: IllegalArgumentException) {
+                                    Toast.makeText(context, "Erro de configuração do FileProvider", Toast.LENGTH_LONG).show()
+                                    return@Button
+                                }
+
+                                fotoUri = uri
+
+                                val captureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                                    putExtra(MediaStore.EXTRA_OUTPUT, uri)
+                                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                                }
+
+                                if (captureIntent.resolveActivity(context.packageManager) != null) {
+                                    cameraLauncher.launch(captureIntent)
+                                } else {
+                                    Toast.makeText(context, "Nenhum app de câmera encontrado", Toast.LENGTH_SHORT).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Erro: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                e.printStackTrace()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Camera,
+                            contentDescription = "Tirar foto"
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Tirar Foto da Árvore")
+                    }
+
+                    // Flags section
                     Text("Flags:", style = MaterialTheme.typography.bodyLarge)
                     Column {
-                        val flags = Flag.values()
-                        val rows = 5
-                        val cols = 6
+                        val flags = Flag.values().toList()
+                        val chunkedFlags = flags.chunked(6)
 
-                        for (i in 0 until rows) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                for (j in 0 until cols) {
-                                    val index = i * cols + j
-                                    if (index < flags.size) {
-                                        val flag = flags[index]
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Checkbox(
-                                                checked = flagsSelecionadas.contains(flag),
-                                                onCheckedChange = { isChecked ->
-                                                    flagsSelecionadas = if (isChecked) {
-                                                        flagsSelecionadas + flag
-                                                    } else {
-                                                        flagsSelecionadas - flag
-                                                    }
+                        chunkedFlags.forEach { rowFlags ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                rowFlags.forEach { flag ->
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Checkbox(
+                                            checked = flagsSelecionadas.contains(flag),
+                                            onCheckedChange = { isChecked ->
+                                                flagsSelecionadas = if (isChecked) {
+                                                    flagsSelecionadas + flag
+                                                } else {
+                                                    flagsSelecionadas - flag
                                                 }
-                                            )
-                                            Text(text = flag.name, fontSize = 14.sp)
-                                        }
+                                            }
+                                        )
+                                        Text(text = flag.name, fontSize = 14.sp)
                                     }
                                 }
                             }
@@ -155,8 +227,10 @@ fun PreenchimentoDadosScreen(
                 }
             }
 
-            // Botões para salvar ou cancelar
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
                 Button(
                     onClick = { navController.popBackStack() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -166,14 +240,14 @@ fun PreenchimentoDadosScreen(
 
                 Button(
                     onClick = {
-                        if (family.isEmpty() || species.isEmpty()) { // Remova a verificação de plotCode
+                        if (newTagNo <= 0 || species.isEmpty()) {
                             showSnackbarMessage = "Preencha todos os campos obrigatórios."
                             return@Button
                         }
 
                         isLoading = true
                         val dados = Dados(
-                            PlotCode = plotCode, // Usa o nome da parcela como PlotCode
+                            PlotCode = plotCode,
                             newTagNo = newTagNo,
                             newStemGrouping = newStemGrouping,
                             t1 = t1,
@@ -187,6 +261,7 @@ fun PreenchimentoDadosScreen(
                             diametro130cm = diametro130cm,
                             altura = altura,
                             observacoes = observacoes,
+                            fotos = if (fotoUrl.isNotEmpty()) listOf(fotoUrl) else emptyList(),
                             flags = flagsSelecionadas,
                             anotador = anotador,
                             timestamp = Timestamp.now()
@@ -196,17 +271,17 @@ fun PreenchimentoDadosScreen(
                             parcelaId = parcela,
                             ruaId = rua.toString(),
                             subplotId = subplot,
-                            dados = dados,
+                            dados = dados.copy(id = newTagNo.toString()),
                             onComplete = { success ->
                                 isLoading = false
-                                if (success) {
-                                    showSnackbarMessage = "Dados salvos com sucesso!"
+                                showSnackbarMessage = if (success) {
                                     navController.popBackStack()
+                                    "Dados salvos com sucesso!"
                                 } else {
-                                    showSnackbarMessage = "Erro ao salvar dados."
+                                    "Erro ao salvar dados."
                                 }
                             },
-                            onError = { exception -> // Agora o onError é reconhecido
+                            onError = { exception ->
                                 isLoading = false
                                 showSnackbarMessage = "Erro: ${exception.message}"
                             }
@@ -225,7 +300,6 @@ fun PreenchimentoDadosScreen(
         }
     }
 
-    // Exibir mensagem de erro se necessário
     LaunchedEffect(showSnackbarMessage) {
         showSnackbarMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
@@ -241,52 +315,189 @@ fun CampoTexto(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-    )
+    Column(modifier = modifier.fillMaxWidth().padding(8.dp)) {
+        Text(
+            text = label,
+            color = Color.Gray,
+            fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(8.dp),
+            textStyle = LocalTextStyle.current.copy(
+                color = Color.Black,
+                fontSize = 18.sp
+            ),
+            singleLine = true,
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = Color.Gray,
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(12.dp)
+                ) {
+                    innerTextField()
+                }
+            }
+        )
+    }
 }
 
 @Composable
-fun CampoNumero(
+fun CampoInteiro(
     label: String,
-    value: Double,
-    onValueChange: (Double) -> Unit,
+    value: Int,
+    onValueChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    TextField(
-        value = value.toString(),
-        onValueChange = { newValue ->
-            onValueChange(newValue.toDoubleOrNull() ?: 0.0)
-        },
-        label = { Text(label) },
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-    )
+    Column(modifier = modifier.fillMaxWidth().padding(8.dp)) {
+        Text(
+            text = label,
+            color = Color.Gray,
+            fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        BasicTextField(
+            value = value.toString(),
+            onValueChange = { newValue ->
+                onValueChange(newValue.toIntOrNull() ?: 0)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(8.dp),
+            textStyle = LocalTextStyle.current.copy(
+                color = Color.Black,
+                fontSize = 18.sp
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number
+            ),
+            singleLine = true,
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = Color.Gray,
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(12.dp)
+                ) {
+                    innerTextField()
+                }
+            }
+        )
+    }
 }
 
-fun getUserNameFromFirestore(
-    userId: String,
-    onSuccess: (String) -> Unit,
-    onError: (Exception) -> Unit
+@Composable
+fun CampoFloat(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val firestore = FirebaseFirestore.getInstance()
-    firestore.collection("users").document(userId)
-        .get()
-        .addOnSuccessListener { document ->
-            if (document != null && document.exists()) {
-                val name = document.getString("name") ?: ""
-                onSuccess(name)
-            } else {
-                onError(Exception("Usuário não encontrado no Firestore"))
+    var textValue by remember(value) {
+        mutableStateOf(
+            if (value % 1 == 0f) value.toInt().toString()
+            else value.toString()
+        )
+    }
+
+    Column(modifier = modifier.fillMaxWidth().padding(8.dp)) {
+        Text(
+            text = label,
+            color = Color.Gray,
+            fontSize = 14.sp,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        BasicTextField(
+            value = textValue,
+            onValueChange = { newValue ->
+                textValue = newValue
+                val floatValue = newValue.toFloatOrNull() ?: 0f
+                onValueChange(floatValue)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(8.dp),
+            textStyle = LocalTextStyle.current.copy(
+                color = Color.Black,
+                fontSize = 18.sp
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done
+            ),
+            singleLine = true,
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = Color.Gray,
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(12.dp)
+                ) {
+                    innerTextField()
+                }
+            }
+        )
+    }
+}
+
+private fun createImageFile(context: Context): File? {
+    return try {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir
+
+        if (!storageDir.exists() && !storageDir.mkdirs()) {
+            return null
+        }
+
+        File.createTempFile(
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir
+        ).apply {
+            createNewFile()
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+private fun uploadFoto(
+    context: Context,
+    imageUri: Uri,
+    tagNo: Int,
+    onSuccess: (String) -> Unit
+) {
+    val storageRef = Firebase.storage.reference
+    val fotoRef = storageRef.child("arvores/${tagNo}_${UUID.randomUUID()}.jpg")
+
+    fotoRef.putFile(imageUri)
+        .addOnSuccessListener {
+            fotoRef.downloadUrl.addOnSuccessListener { uri ->
+                onSuccess(uri.toString())
             }
         }
-        .addOnFailureListener { exception ->
-            onError(exception)
+        .addOnFailureListener { e ->
+            Toast.makeText(context, "Erro ao enviar foto: ${e.message}", Toast.LENGTH_SHORT).show()
         }
 }

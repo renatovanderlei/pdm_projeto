@@ -64,6 +64,12 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage.ktx)
+    implementation ("com.google.firebase:firebase-storage-ktx")
+
+    implementation ("com.google.firebase:firebase-storage-ktx")
+    implementation ("io.coil-kt:coil-compose:2.4.0")
+    implementation ("androidx.compose.material:material-icons-extended:1.6.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -72,4 +78,6 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+
 }

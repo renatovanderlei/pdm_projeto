@@ -21,11 +21,12 @@ data class Dados(
     val family: String,
     val originalIdentification: String,
     val species: String,
-    val diametro30cm: Double,
-    val diametro130cm: Double,
-    val altura: Double,
+    val diametro30cm: Float,
+    val diametro130cm: Float,
+    val altura: Float,
     val observacoes: String,
     val flags: List<Flag>,  // Agora é uma lista de flags
     val anotador: Anotador,
+    val fotos: List<String> = emptyList(), // Lista de IDs/referências das fotos
     val timestamp: Timestamp = Timestamp.now()
 )

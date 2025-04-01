@@ -41,11 +41,10 @@ fun RegisterScreen(navController: NavHostController, modifier: Modifier = Modifi
         horizontalAlignment = CenterHorizontally,
     ) {
         Image(
-            painter = painterResource(id = R.drawable.logo_fp), // Substitua pelo ID correto da sua imagem
+            painter = painterResource(id = R.drawable.logo_fp),
             contentDescription = "Logo",
             modifier = Modifier
-                //.size(250.dp) // Ajuste o tamanho da imagem conforme necessário
-                .padding(bottom = 8.dp), // Diminuir o espaçamento entre a logo e o texto
+                .padding(bottom = 8.dp),
             contentScale = ContentScale.Fit
         )
 
@@ -100,7 +99,11 @@ fun RegisterScreen(navController: NavHostController, modifier: Modifier = Modifi
 
         Spacer(modifier = Modifier.size(24.dp))
 
-        Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        // Linha com Registrar e Limpar
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Button(
                 onClick = {
                     val fbDatabase = FBDatabase()
@@ -128,7 +131,6 @@ fun RegisterScreen(navController: NavHostController, modifier: Modifier = Modifi
                 Text("Registrar", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
 
-
             Button(
                 onClick = {
                     name = ""; email = ""; password = ""; confirmpassword = ""
@@ -145,23 +147,24 @@ fun RegisterScreen(navController: NavHostController, modifier: Modifier = Modifi
             ) {
                 Text("Limpar", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
+        }
 
-            Button(
-                onClick = {
-                    navController.navigate("login")
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black
-                ),
-                border = BorderStroke(2.dp, Color.White),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(8.dp)
-            ) {
-                Text("Cancelar", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            }
+        // Botão Cancelar em linha separada
+        Button(
+            onClick = {
+                navController.navigate("login")
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = Color.Black
+            ),
+            border = BorderStroke(2.dp, Color.White),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        ) {
+            Text("Cancelar", fontSize = 22.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
