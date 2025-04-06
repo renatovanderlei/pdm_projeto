@@ -9,3 +9,4 @@ data class User(
     // Construtor secundário caso precise criar um usuário sem parâmetros
     constructor() : this("", "", "", emptyList())
 }
+

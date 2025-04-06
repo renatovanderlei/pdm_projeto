@@ -43,6 +43,8 @@ class MainViewModel(private val fbDB: FBDatabase) : ViewModel(), FBDatabase.List
         }
     }
 
+
+
     fun onAdicionarParcela(parcela: Parcela, userId: String) {
         if (userId.isBlank()) {
             println("Erro: userId não pode ser vazio")
